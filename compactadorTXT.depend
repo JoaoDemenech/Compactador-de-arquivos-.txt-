@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1768759080 source:c:\users\usuario\documents\programacao\tutoriais\compactadortxt\main.cpp
+	<iostream>
+	<filesystem>
+	<fstream>
+
