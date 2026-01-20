@@ -237,22 +237,27 @@ void gerarCodigos(node* raiz, std::vector<bool> caminho) { // e nao sei disso tm
 }
 
 void salvarBinario(string caminhoOriginal, node* listaOrdenada) { // reescrever / estudar isso que nao sei como funciona
+
     string nomeSaida;
-    cout << "Digite o nome do arquivo de saida (ex: compactado.bin): ";
+    cout << "Digite o nome do arquivo de saida com .bin no final: ";
     cin >> nomeSaida;
 
     ofstream arquivoSaida(nomeSaida, ios::binary);
     ifstream arquivoOriginal(caminhoOriginal);
 
     if (!arquivoSaida.is_open() || !arquivoOriginal.is_open()) {
-        cout << "Erro ao processar arquivos!" << endl;
+        cout << "Erro ao abrir arquivos!" << endl;
         return;
     }
 
     // 1. GRAVAR CABEÇALHO (Quantos caracteres diferentes e suas frequências)
+
     int totalDiferentes = 0;
     node* temp = listaOrdenada;
-    while(temp) { totalDiferentes++; temp = temp->p; }
+    while(temp){
+            totalDiferentes++;
+            temp = temp->p;
+    }
 
     arquivoSaida.write((char*)&totalDiferentes, sizeof(int));
 
@@ -263,7 +268,7 @@ void salvarBinario(string caminhoOriginal, node* listaOrdenada) { // reescrever 
         temp = temp->p;
     }
 
-    // 2. GRAVAR CONTEÚDO COMPACTADO (Bit-packing)
+    // 2. GRAVAR CONTEÚDO COMPACTADO
     unsigned char buffer = 0;
     int contadorBits = 0;
     char c;
@@ -322,47 +327,137 @@ node* copiar(node* raiz){
     }
 }
 
+int descompactar(){
+
+    string caminhoArquivoBinario;
+    string nomeArquivoSaida;
+    int numCaracteresDiferentes;
+    char tempChar;
+    int tempFreq;
+
+    // PRIMEIRO PEGAR E ABRIR O ARQUIVO BINARIO
+    // ----------------------------------------------------------------------------------------
+
+    cout << "digine o caminho completo do arquivo binario a ser descompactado: " <<endl;
+    getline(cin, caminhoArquivoBinario);
+
+    ifstream arquivoCompactado;
+    arquivoCompactado.open(caminhoArquivoBinario, ios::in | ios::binary);
+
+    if (!arquivoCompactado.is_open()){
+        cout<< "erro ao abrir o arquivo compactado" <<endl;
+        return 1;
+    }
+    else{
+        cout<< "arquivo compactado aberto com sucesso " << endl;
+    }
+
+    // DEPOIS ABRIR O ARQUIVO TXT DE DESCOMPACTACAO
+    // ----------------------------------------------------------------------------------------
+
+    cout << "digite o nome do arquivo de saida com o .txt" << endl;
+    getline(cin, nomeArquivoSaida);
+
+    ofstream arquivoDeSaida(nomeArquivoSaida);
+
+    if (!arquivoDeSaida.is_open()){
+        cout << "Erro ao criar o arquivo de saida .txt"<<endl;
+        return 1;
+    }
+    else{
+        cout<< "arquivo de saida / descompactado aberto com sucesso " << endl;
+    }
+
+    // DEPOIS LER O ARQUIVO BINARIO E MONTAR A ARVORE NOVAMENTE
+
+    arquivoCompactado.read((char*)&numCaracteresDiferentes, sizeof(int));
+    cout << numCaracteresDiferentes << endl;
+
+    for (int i = 0; i < numCaracteresDiferentes; i++){
+        arquivoCompactado.read((char*)&tempChar, sizeof(char));
+        arquivoCompactado.read((char*)&tempFreq, sizeof(int));
+        cout << tempChar << endl;
+        cout << tempFreq << endl;
+    }
+
+    return 1;
+}
+
 
 int main()
 {
     node* prim = NULL;
     node* copiaOrdenada = NULL;
     string caminho;
+    int op;
+
+    do{
+        cout << "------------------------------------------------" << endl;
+        cout << " 1 - compactar um arquivo .txt " << endl;
+        cout << " 2 - descompactar um arquivo .bin " << endl;
+        cout << " 3 - encerrar o programa " << endl;
+        cout << " digite a opcao desejada: " << endl;
+        cin >> op;
+
+        switch(op){
+            case 1:{
+                //compactar(); // passar toda a parte de compactar para ele, uma funcao propria que vai chamando as outras
+                break;
+            }
+            case 2:{
+                descompactar();
+                break;
+            }
+            case 3:{
+                break;
+            }
+            default:{
+                cout << "opcao invalida, tente novamente " << endl;
+                break;
+            }
+        }
+    }while (3 != op);
 
     // 1 ETAPA - PEGAR O CAMINHO DO ARQUIVO TXT
     // ADICIONAR DEPOIS UM CHECK PARA TIPO DE ARQUIVO
+    /*
 
     cout << "Digite o caminho completo sem "" do arquivo TXT a ser compactado: " << endl;
     getline(cin, caminho);
-    system ("cls");
+    system("cls");
 
     prim = contador(caminho);
-    imprimir(prim);
 
     // ETAPA 1 FEITA COM SUCESSO
 
-    // ETAPA 2 ORDENAR POR QUANTIDADE DE CARACTERER, MENOR PARA O MAIOR
+    // ETAPA 2 ORDENAR POR QUANTIDADE DE CARACTERER, MENOR PARA O MAIOR, CRIAR COPIA PARA DEPOIS
 
     prim = ordenar(prim);
-    imprimir(prim);
     copiaOrdenada = copiar(prim);
+
+    imprimir(prim); // IMPRIMIR OS CARACTERES EM ORDEM DE FREQUENCIA
+
     // criei uma copia da lista ordenada para ajudar a montar o dicionario
     // ETAPA 2 CONCLUIDA, ESTA EM ORDEM
+
     // ETAPA 3 MONTAR A ARVORE DE HUFFMAN
 
     prim = montarArvore(prim);
-    // DEU CERTO
-    cout << "deu certo a arvore" << endl;
     // ETAPA 4 montar o dicionairo das substituicoes
 
     std::vector<bool> caminhoAux;
     gerarCodigos(prim, caminhoAux);
-    cout << "voltei ao main" << endl;
 
     // ETAPA 5 salvar em binario junto do dicionairo
-    // feito na sequencia da ETAPA 4 para aproveitar as variaveis criadas
     // BITS TOTAIS / CARACTERE E SUA FREQUENCIA / SEQUENCIA COMPLETA
 
-
-    return 0;
+    salvarBinario(caminho, copiaOrdenada);
+    */
+    return 1;
 }
+
+// TAREFAS
+// pegar o mesmo nome do arquivo compactado e usar ele como saida na hora de descompactar
+// tirar a necessidade de colocar o .txt, e de tirar os ""
+// colocar o dicionario como algo local, juntar a criacao dele com a compactacao / salvar em binario, ou de ler em binario e criar um .txt
+
