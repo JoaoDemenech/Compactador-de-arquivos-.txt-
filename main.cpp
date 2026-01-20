@@ -7,12 +7,14 @@ using namespace std;
 
 typedef struct node{
 
-    char caractere;
+    unsigned char caractere;
     int quantidade;
     node *p;
     node *p2;
     bool interno = 0;
+
     // imaginar como um no de uma arvore, direita e P e esquerda P2
+
 }node;
 
 typedef struct dicionario {
@@ -20,79 +22,57 @@ typedef struct dicionario {
     std::vector<bool> codigo;
 } dicionario;
 
-
 std::vector<dicionario> listaDicionario;
 
-node* contador(string caminho){
+node* contador(string caminho) {
 
-    ifstream arquivo;
-    string linha;
-    int contadorLinha = 0;
-    int tamLinha;
+    ifstream arquivo(caminho, ios::binary); // Abre em modo binário para não ignorar caracteres como \n
+    unsigned char c;
+    char temp;
     node *primeiro = NULL;
     node *ponteiro = NULL;
 
-    arquivo.open(caminho);
-
-
-    if (!arquivo.is_open()){
-        cout << "erro ao abrir o arquivo " <<endl;
+    if (!arquivo.is_open()) {
+        cout << "Erro ao abrir o arquivo" << endl;
         return NULL;
     }
-    else{
-        cout << "ARQUIVO ABERTO COM SUCESSO " << endl;
-    }
 
-    // PEGA A PRIMEIRA LINHA
-    while (getline(arquivo, linha)){
-        tamLinha = linha.length();
-        contadorLinha = 0;
-        //ACESA CADA CARACTERE DA LINHA
-        do{
-            // CARACTERES NAO VALIDOS NAO SAO COMPACTADOS
-            // !!! COMO VOU RECONSTRUIR O TXT DEPOIS? VER ISSO !!!
-            if ( linha[contadorLinha] < 33 || linha[contadorLinha] > 126 ){
-                contadorLinha++;
-            }
+    // Lê o arquivo caractere por caractere até o fim
+    while (arquivo.get(temp)){
+
+        c = (unsigned char)temp;
+
+        if (primeiro == NULL){
+            primeiro = new node;
+            primeiro->caractere = c;
+            primeiro->quantidade = 1;
+            primeiro->p = NULL;
+            primeiro->p2 = NULL;
+            primeiro->interno = false;
+        }
+        else{
+            ponteiro = primeiro;
+            // Procura o caractere na lista ligada
+
+            while (ponteiro->p != NULL && ponteiro->caractere != c)
+                ponteiro = ponteiro->p;
+
+            if (ponteiro->caractere == c)
+                ponteiro->quantidade++;
+
             else{
-                if (primeiro == NULL){
-                    primeiro = new node;
-                    primeiro->caractere = linha[contadorLinha];
-                    primeiro->quantidade = 1;
-                    primeiro->p = NULL;
-                    primeiro->p2 = NULL;
-                    cout<< "PRIMEIRO NODE ADICIONADO" << endl;
-                }
-                else{
-                    ponteiro = primeiro;
-
-                    while (ponteiro->p != NULL && ponteiro->caractere != linha[contadorLinha]){
-                        ponteiro = ponteiro -> p;
-                    }
-                    if (ponteiro->caractere == linha[contadorLinha])
-                        ponteiro->quantidade++;
-
-                    else{
-                        ponteiro->p = new node;
-                        ponteiro->p->caractere = linha[contadorLinha];
-                        ponteiro->p->quantidade = 1;
-                        ponteiro->p->p = NULL;
-                        ponteiro->p->p2 = NULL;
-                    }
-                }
+                // Se não achou, cria um novo nó no fim da lista
+                ponteiro->p = new node;
+                ponteiro->p->caractere = c;
+                ponteiro->p->quantidade = 1;
+                ponteiro->p->p = NULL;
+                ponteiro->p->p2 = NULL;
+                ponteiro->p->interno = false;
             }
-                contadorLinha++;
-        }while(contadorLinha < tamLinha);
+        }
     }
-return primeiro;
-}
-
-void imprimir(node* p){
-    while (NULL != p){
-        cout << p->caractere <<" "<<p->quantidade <<endl;
-        p = p->p;
-    }
-    cout << "------------------" << endl;
+    arquivo.close();
+    return primeiro;
 }
 
 node* remover(node* marcada, node* primeiro){
@@ -115,6 +95,7 @@ node* remover(node* marcada, node* primeiro){
 }
 
 node* ordenar(node* primeiro){
+
     node* ordenado = NULL;  // onde adiciona as nodes em ordem de frequencia, menor ao maior
     node* marcador = NULL;  // marca a node com menor valor de frequencia
     node* p = primeiro;     // percore a lista nao ordenada
@@ -383,6 +364,34 @@ int descompactar(){
     return 1;
 }
 
+void compactar(){
+    // AQUI OCORREM AS MULTIPLAS ETAPAS NECESSESAIRAS PARA COMPACTAR O ARQUIVO
+
+    node* prim = NULL;          // ponteiro para a lista de NODES principal que e usada por varias etapas para ir realizando o processo
+    node* copiaOrdenada = NULL; // copia da lista ordenada para facilitar a criacao do dicionario, ver depois de retirar a necessidade disso
+    string caminho;             // caminho do arquivo .txt que sera compactado
+
+    // 1 ETAPA - PEGAR O CAMINHO DO ARQUIVO TXT E CONTAR OS CARACTERES CRIANDO A FILA DE NODES
+
+    cout << "Digite o caminho completo sem "" do arquivo .txt a ser compactado: " << endl;
+    getline(cin, caminho);
+    system("cls");
+
+    prim = contador(caminho);
+
+    // ETAPA 2 ORDENAR POR QUANTIDADE DE CARACTERER, MENOR PARA O MAIOR, CRIAR COPIA PARA DEPOIS
+
+    prim = ordenar(prim);
+    copiaOrdenada = copiar(prim);
+
+    // ETAPA 3 MONTAR A ARVORE DE HUFFMAN
+
+    prim = montarArvore(prim);
+
+    // ETAPA 4 MONTAR O DICIONARIO E CRIAR O BINARIO
+
+
+}
 
 int main()
 {
@@ -399,9 +408,12 @@ int main()
         cout << " digite a opcao desejada: " << endl;
         cin >> op;
 
+        getchar();
+        system("cls");
+
         switch(op){
             case 1:{
-                //compactar(); // passar toda a parte de compactar para ele, uma funcao propria que vai chamando as outras
+                compactar(); // passar toda a parte de compactar para ele, uma funcao propria que vai chamando as outras
                 break;
             }
             case 2:{
@@ -417,42 +429,6 @@ int main()
             }
         }
     }while (3 != op);
-
-    // 1 ETAPA - PEGAR O CAMINHO DO ARQUIVO TXT
-    // ADICIONAR DEPOIS UM CHECK PARA TIPO DE ARQUIVO
-    /*
-
-    cout << "Digite o caminho completo sem "" do arquivo TXT a ser compactado: " << endl;
-    getline(cin, caminho);
-    system("cls");
-
-    prim = contador(caminho);
-
-    // ETAPA 1 FEITA COM SUCESSO
-
-    // ETAPA 2 ORDENAR POR QUANTIDADE DE CARACTERER, MENOR PARA O MAIOR, CRIAR COPIA PARA DEPOIS
-
-    prim = ordenar(prim);
-    copiaOrdenada = copiar(prim);
-
-    imprimir(prim); // IMPRIMIR OS CARACTERES EM ORDEM DE FREQUENCIA
-
-    // criei uma copia da lista ordenada para ajudar a montar o dicionario
-    // ETAPA 2 CONCLUIDA, ESTA EM ORDEM
-
-    // ETAPA 3 MONTAR A ARVORE DE HUFFMAN
-
-    prim = montarArvore(prim);
-    // ETAPA 4 montar o dicionairo das substituicoes
-
-    std::vector<bool> caminhoAux;
-    gerarCodigos(prim, caminhoAux);
-
-    // ETAPA 5 salvar em binario junto do dicionairo
-    // BITS TOTAIS / CARACTERE E SUA FREQUENCIA / SEQUENCIA COMPLETA
-
-    salvarBinario(caminho, copiaOrdenada);
-    */
     return 1;
 }
 
@@ -460,4 +436,7 @@ int main()
 // pegar o mesmo nome do arquivo compactado e usar ele como saida na hora de descompactar
 // tirar a necessidade de colocar o .txt, e de tirar os ""
 // colocar o dicionario como algo local, juntar a criacao dele com a compactacao / salvar em binario, ou de ler em binario e criar um .txt
+// adicionar um check para o tipo de arquivo na hora de pegar o caminho do .txt
+// modificar, em vez de lista encadeada enquanto le os caracteres usar um vetor, depois ordenar ele
+
 
