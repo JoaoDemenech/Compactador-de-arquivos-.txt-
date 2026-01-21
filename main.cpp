@@ -18,11 +18,9 @@ typedef struct node{
 }node;
 
 typedef struct dicionario {
-    char caractere;
+    unsigned char caractere;
     std::vector<bool> codigo;
 } dicionario;
-
-std::vector<dicionario> listaDicionario;
 
 node* contador(string caminho) {
 
@@ -171,117 +169,141 @@ node* montarArvore(node* inicio){
     }
 }
 
-void imprimirArvore(node *raiz){
+int salvarBinario(string caminho, node* copiaListaOrdenada, node* raizArvore){
 
-    if (raiz->p2 != NULL){
-        imprimirArvore(raiz->p2);
-    }
-    if (raiz->p != NULL){
-        imprimirArvore(raiz->p);
-    }
-    cout << raiz->quantidade <<endl;
-}
+    // aqui ocorre primeiro a montagem do dicionario, depois o salvamento em binario
 
-int contarEsquerdaArvore(node* raiz){
-    if (raiz->p2 != NULL)
-        return (1 + contarEsquerdaArvore(raiz->p2));
+    std::vector<bool> codigo; // o codigo que vou indo salvando
+    std::vector<dicionario> listaDicionariol; // cria a lista de dicionario
+    node* p;
+    dicionario aux;
 
-    else
+    if (!raizArvore){
+        cout << "ERRO ARVORE VAIZIA" << endl;
         return 1;
-}
-
-void gerarCodigos(node* raiz, std::vector<bool> caminho) { // e nao sei disso tmb
-    if (raiz == NULL) return;
-
-    // Se for nó folha, salva o caractere e o código acumulado
-    if (raiz->interno == 0) {
-        dicionario d;
-        d.caractere = raiz->caractere;
-        d.codigo = caminho;
-        listaDicionario.push_back(d);
-        return;
     }
 
-    // Caminho para a esquerda (p2) recebe bit 0
-    if (raiz->p2 != NULL) {
-        caminho.push_back(0);
-        gerarCodigos(raiz->p2, caminho);
-        caminho.pop_back(); // Remove o bit para tentar o outro lado
+    if (raizArvore->interno == 0){
+        aux.caractere = raizArvore->caractere;
+        codigo.push_back(1);
+        aux.codigo = codigo;
+        listaDicionariol.push_back(aux);
     }
+    else{
+        do{
+            // checa se ja esta no fim da arvore, no caso de ter 1 caractere so este seria interno e o unico que precisa ser ADD no dicionario
+            if (raizArvore->interno == 1){
+                p = raizArvore->p;
+                if (p->interno == 0){
 
-    // Caminho para a direita (p) recebe bit 1
-    if (raiz->p != NULL) {
-        caminho.push_back(1);
-        gerarCodigos(raiz->p, caminho);
-        caminho.pop_back();
-    }
-}
+                // ele vai sempre para a esquerda, se for interno ele coloca o 1 final do codigo, salva no dicionario o caractere que tem no node
+                // bem como o codigo salvo ate agora, dai ele ja tira esse 1 adicionado
 
-void salvarBinario(string caminhoOriginal, node* listaOrdenada) { // reescrever / estudar isso que nao sei como funciona
-
-    string nomeSaida;
-    cout << "Digite o nome do arquivo de saida com .bin no final: ";
-    cin >> nomeSaida;
-
-    ofstream arquivoSaida(nomeSaida, ios::binary);
-    ifstream arquivoOriginal(caminhoOriginal);
-
-    if (!arquivoSaida.is_open() || !arquivoOriginal.is_open()) {
-        cout << "Erro ao abrir arquivos!" << endl;
-        return;
-    }
-
-    // 1. GRAVAR CABEÇALHO (Quantos caracteres diferentes e suas frequências)
-
-    int totalDiferentes = 0;
-    node* temp = listaOrdenada;
-    while(temp){
-            totalDiferentes++;
-            temp = temp->p;
-    }
-
-    arquivoSaida.write((char*)&totalDiferentes, sizeof(int));
-
-    temp = listaOrdenada;
-    while(temp) {
-        arquivoSaida.put(temp->caractere);
-        arquivoSaida.write((char*)&temp->quantidade, sizeof(int));
-        temp = temp->p;
-    }
-
-    // 2. GRAVAR CONTEÚDO COMPACTADO
-    unsigned char buffer = 0;
-    int contadorBits = 0;
-    char c;
-
-    while (arquivoOriginal.get(c)) {
-        // Busca o código do caractere no dicionário
-        for (const auto& d : listaDicionario) {
-            if (d.caractere == c) {
-                for (bool bit : d.codigo) {
-                    buffer = (buffer << 1) | bit;
-                    contadorBits++;
-
-                    if (contadorBits == 8) {
-                        arquivoSaida.put(buffer);
-                        buffer = 0;
-                        contadorBits = 0;
-                    }
+                    codigo.push_back(1);
+                    aux.caractere = p->caractere;
+                    aux.codigo = codigo;
+                    listaDicionariol.push_back(aux);
+                    codigo.pop_back();
                 }
+                codigo.push_back(0);
+            }
+            else{
+                // so vai entrar aqui uma vez, no ultimo caractere da arvore, depois disso p2 == NULL entao sai do loop;
+                aux.caractere = raizArvore->caractere;
+                aux.codigo = codigo;
+                listaDicionariol.push_back(aux);
+            }
+            raizArvore = raizArvore->p2;
+            // o codigo vai percorrendo, ele entra no p onde fica a maioria dos caracteres e salva ele no dicionario
+            // tem que adicinoar para o ultimo caractere que esta presente no p2
+        }while (raizArvore);
+    }
+    // DICIONARIO CONPLETO
+    // AGORA TENHO QUE SALVAR O CABECALHO
+
+    ifstream arquivoOriginal;
+    arquivoOriginal.open(caminho, ios::in | ios::binary); // ABRE O ARQUIVO ORIGINAL NA FORMA DE BINARIO
+
+    string nomeArquivoCompactado;
+    cout << "Digite um nome para o arquivo de saida com .bin" << endl;
+    getline (cin, nomeArquivoCompactado);
+
+    ofstream arquivoCompactado(nomeArquivoCompactado, ios::binary);
+
+    if (!arquivoOriginal.is_open()){
+        cout << "ERRO: FALHA EM ABRIR O ARQUIVO ORIGINAL " << endl;
+        return 1;
+    }
+    else{
+        cout << "ARQUIVO ORIGINAL ABERTO COM SUCESSO " << endl;
+    }
+    if (!arquivoCompactado.is_open()){
+        cout << "ERRO: FALHA AO CRIAR O ARQUIVO .BIN DE SAIDA" << endl;
+        return 1;
+    }
+    else{
+        cout << "ARQUIVO COMPACTADO CRIADO COM SUCESSO " << endl;
+    }
+
+    // salvando o cabecalho, primeiro o numero total de caracteres diferentes, 4 Bytes
+    int numCaracteresDiferentes = 0;
+    p = copiaListaOrdenada;
+
+    while(p){
+        numCaracteresDiferentes++;
+        p = p->p;
+    }
+
+    arquivoCompactado.write((char*)&numCaracteresDiferentes, sizeof(int32_t));
+
+    cout << "numero de caracteres diferentes : " << numCaracteresDiferentes << endl;
+
+    // salvar os respectivos caracteres (1 byte ) e sua frequencia ( 4 bytes )
+
+    p = copiaListaOrdenada;
+
+    while (p){
+        arquivoCompactado.write((char*)&p->caractere, sizeof(char));
+        arquivoCompactado.write((char*)&p->quantidade, sizeof(int32_t));
+        p = p->p;
+    }
+
+    cout << "teste 1" << endl;
+    // agora preciso adicionar e ir substituindo caractere por caractere, a parte foda
+
+    char temp;
+    unsigned char buffer = 0  ; // se iniciar isso como 1, fica 10000000, e como meu formato e 1,01,001... da pra usar
+    int i, tam, j;
+    int contadorBuffer = 0;
+
+    while (arquivoOriginal.get(temp)){
+
+        for (int i = 0; listaDicionariol[i].caractere != temp; i++){
+            if (i == numCaracteresDiferentes)
                 break;
+        }; // acha o index do dicionario onde o caractere esta
+
+        tam = listaDicionariol[i].codigo.size();
+
+        for (j = 0; j < tam; j++){
+
+            if (listaDicionariol[i].codigo[j] == 0){
+                contadorBuffer++;
+            }
+            if (listaDicionariol[i].codigo[j] == 1){
+                buffer = buffer|(1<<contadorBuffer);
+                contadorBuffer++;
+            }
+            if (contadorBuffer == 8){
+                arquivoCompactado.write((char*)&buffer, sizeof(char));
+                buffer = 0;
+                contadorBuffer = 0;
             }
         }
     }
+    if (0 != contadorBuffer)
+        arquivoCompactado.write((char*)&buffer, sizeof(char));
 
-    // Grava os bits restantes (padding)
-    if (contadorBits > 0) {
-        buffer = buffer << (8 - contadorBits);
-        arquivoSaida.put(buffer);
-    }
-
-    cout << "Arquivo compactado com sucesso!" << endl;
-    arquivoSaida.close();
-    arquivoOriginal.close();
 }
 
 node* copiar(node* raiz){
@@ -293,13 +315,15 @@ node* copiar(node* raiz){
     }
     else{
         ponto = new node;
-        ponto -> caractere = raiz->caractere;
+        ponto->caractere = raiz->caractere;
+        ponto->quantidade = raiz->quantidade;
         raiz = raiz ->p;
         copia = ponto;
 
         while (raiz != NULL){
             ponto->p = new node;
             ponto->p->caractere = raiz->caractere;
+            ponto->p->quantidade = raiz->quantidade;
             ponto->p->p = NULL;
             raiz = raiz->p;
             ponto = ponto->p;
@@ -379,25 +403,30 @@ void compactar(){
 
     prim = contador(caminho);
 
+    cout << "1 - Nodes criadas" << endl;
+
     // ETAPA 2 ORDENAR POR QUANTIDADE DE CARACTERER, MENOR PARA O MAIOR, CRIAR COPIA PARA DEPOIS
 
     prim = ordenar(prim);
     copiaOrdenada = copiar(prim);
 
+    cout << "2 - Nodes ordenadas e copia criada" << endl;
+
     // ETAPA 3 MONTAR A ARVORE DE HUFFMAN
 
     prim = montarArvore(prim);
 
+    cout << "3 - arvore montada " << endl;
+
     // ETAPA 4 MONTAR O DICIONARIO E CRIAR O BINARIO
 
+    salvarBinario(caminho, copiaOrdenada, prim);
 
+    cout << "4 - Salvo o arquivo compactado .bin " << endl;
 }
 
 int main()
 {
-    node* prim = NULL;
-    node* copiaOrdenada = NULL;
-    string caminho;
     int op;
 
     do{
@@ -435,7 +464,6 @@ int main()
 // TAREFAS
 // pegar o mesmo nome do arquivo compactado e usar ele como saida na hora de descompactar
 // tirar a necessidade de colocar o .txt, e de tirar os ""
-// colocar o dicionario como algo local, juntar a criacao dele com a compactacao / salvar em binario, ou de ler em binario e criar um .txt
 // adicionar um check para o tipo de arquivo na hora de pegar o caminho do .txt
 // modificar, em vez de lista encadeada enquanto le os caracteres usar um vetor, depois ordenar ele
 
