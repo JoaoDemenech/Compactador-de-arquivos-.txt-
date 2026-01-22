@@ -20,6 +20,7 @@ typedef struct node{
 typedef struct dicionario {
     unsigned char caractere;
     std::vector<bool> codigo;
+
 } dicionario;
 
 node* contador(string caminho) {
@@ -183,6 +184,7 @@ int salvarBinario(string caminho, node* copiaListaOrdenada, node* raizArvore){
         return 1;
     }
 
+    // se a arvore tem apenas um no / elemento
     if (raizArvore->interno == 0){
         aux.caractere = raizArvore->caractere;
         codigo.push_back(1);
@@ -268,7 +270,6 @@ int salvarBinario(string caminho, node* copiaListaOrdenada, node* raizArvore){
         p = p->p;
     }
 
-    cout << "teste 1" << endl;
     // agora preciso adicionar e ir substituindo caractere por caractere, a parte foda
 
     char temp;
@@ -278,7 +279,7 @@ int salvarBinario(string caminho, node* copiaListaOrdenada, node* raizArvore){
 
     while (arquivoOriginal.get(temp)){
 
-        for (int i = 0; listaDicionariol[i].caractere != temp; i++){
+        for (i = 0; listaDicionariol[i].caractere != temp; i++){
             if (i == numCaracteresDiferentes)
                 break;
         }; // acha o index do dicionario onde o caractere esta
@@ -304,6 +305,9 @@ int salvarBinario(string caminho, node* copiaListaOrdenada, node* raizArvore){
     if (0 != contadorBuffer)
         arquivoCompactado.write((char*)&buffer, sizeof(char));
 
+    arquivoOriginal.close();
+    arquivoCompactado.close();
+    return 1;
 }
 
 node* copiar(node* raiz){
@@ -332,60 +336,126 @@ node* copiar(node* raiz){
     }
 }
 
-int descompactar(){
-
+int descompactar() {
     string caminhoArquivoBinario;
     string nomeArquivoSaida;
     int numCaracteresDiferentes;
-    char tempChar;
+    unsigned char tempChar;
     int tempFreq;
+    node* prim = NULL;
+    node* auxNode;
+    int i;
 
-    // PRIMEIRO PEGAR E ABRIR O ARQUIVO BINARIO
-    // ----------------------------------------------------------------------------------------
+    // Variável para controlar o fim exato do arquivo
+    int totalCaracteresOriginal = 0;
 
-    cout << "digine o caminho completo do arquivo binario a ser descompactado: " <<endl;
+    cout << "Digite o caminho do arquivo .bin: " << endl;
     getline(cin, caminhoArquivoBinario);
 
-    ifstream arquivoCompactado;
-    arquivoCompactado.open(caminhoArquivoBinario, ios::in | ios::binary);
-
-    if (!arquivoCompactado.is_open()){
-        cout<< "erro ao abrir o arquivo compactado" <<endl;
+    ifstream arquivoCompactado(caminhoArquivoBinario, ios::binary);
+    if (!arquivoCompactado.is_open()) {
+        cout << "Erro ao abrir o binario" << endl;
         return 1;
     }
-    else{
-        cout<< "arquivo compactado aberto com sucesso " << endl;
-    }
 
-    // DEPOIS ABRIR O ARQUIVO TXT DE DESCOMPACTACAO
-    // ----------------------------------------------------------------------------------------
-
-    cout << "digite o nome do arquivo de saida com o .txt" << endl;
+    cout << "Digite o nome do arquivo de saida (.txt): " << endl;
     getline(cin, nomeArquivoSaida);
-
     ofstream arquivoDeSaida(nomeArquivoSaida);
 
-    if (!arquivoDeSaida.is_open()){
-        cout << "Erro ao criar o arquivo de saida .txt"<<endl;
-        return 1;
-    }
-    else{
-        cout<< "arquivo de saida / descompactado aberto com sucesso " << endl;
-    }
+    // 1. LER CABEÇALHO: Número de caracteres diferentes
+    arquivoCompactado.read((char*)&numCaracteresDiferentes, sizeof(int32_t));
 
-    // DEPOIS LER O ARQUIVO BINARIO E MONTAR A ARVORE NOVAMENTE
-
-    arquivoCompactado.read((char*)&numCaracteresDiferentes, sizeof(int));
-    cout << numCaracteresDiferentes << endl;
-
-    for (int i = 0; i < numCaracteresDiferentes; i++){
+    // 2. LER CARACTERES E FREQUÊNCIAS (E somar o total)
+    for (i = 0; i < numCaracteresDiferentes; i++) {
         arquivoCompactado.read((char*)&tempChar, sizeof(char));
-        arquivoCompactado.read((char*)&tempFreq, sizeof(int));
-        cout << tempChar << endl;
-        cout << tempFreq << endl;
+        arquivoCompactado.read((char*)&tempFreq, sizeof(int32_t));
+
+        totalCaracteresOriginal += tempFreq; // Acumula o total de caracteres
+
+        node* p = new node;
+        p->caractere = tempChar;
+        p->quantidade = tempFreq;
+        p->p = NULL;
+        p->p2 = NULL;
+        p->interno = 0;
+
+        if (prim == NULL) {
+            prim = p;
+        } else {
+            auxNode = prim;
+            while (auxNode->p != NULL) auxNode = auxNode->p;
+            auxNode->p = p;
+        }
     }
 
-    return 1;
+    // 3. RECONSTRUIR A ÁRVORE E O DICIONÁRIO
+    node* raizArvore = montarArvore(prim);
+
+    vector<dicionario> listaDicionariol;
+    vector<bool> codigoCaminho;
+    node* p_aux = raizArvore;
+
+    // Lógica de reconstrução do dicionário (Igual à sua do salvarBinario)
+    if (p_aux->interno == 0) {
+        dicionario d;
+        d.caractere = p_aux->caractere;
+        codigoCaminho.push_back(1);
+        d.codigo = codigoCaminho;
+        listaDicionariol.push_back(d);
+    } else {
+        do {
+            if (p_aux->interno == 1) {
+                if (p_aux->p->interno == 0) {
+                    dicionario d;
+                    codigoCaminho.push_back(1);
+                    d.caractere = p_aux->p->caractere;
+                    d.codigo = codigoCaminho;
+                    listaDicionariol.push_back(d);
+                    codigoCaminho.pop_back();
+                }
+                codigoCaminho.push_back(0);
+            } else {
+                dicionario d;
+                d.caractere = p_aux->caractere;
+                d.codigo = codigoCaminho;
+                listaDicionariol.push_back(d);
+            }
+            p_aux = p_aux->p2;
+        } while (p_aux);
+    }
+
+    // 4. LER O TEXTO COMPACTADO (Bit a Bit)
+    unsigned char buffer;
+    vector<bool> codigoAtual;
+    int caracteresProcessados = 0;
+
+    // Lê byte a byte do arquivo
+    while (arquivoCompactado.read((char*)&buffer, sizeof(unsigned char)) && caracteresProcessados < totalCaracteresOriginal) {
+
+        // Percorre os 8 bits do byte (Direita para Esquerda)
+        for (int b = 0; b < 8; b++) {
+            bool bit = (buffer & (1 << b)) != 0;
+            codigoAtual.push_back(bit);
+
+            // TESTA O DICIONÁRIO: A cada bit novo, verificamos se o código formou um caractere
+            for (const auto& item : listaDicionariol) {
+                if (item.codigo == codigoAtual) {
+                    arquivoDeSaida.put(item.caractere);
+                    caracteresProcessados++;
+                    codigoAtual.clear(); // Limpa para o próximo caractere
+                    break;
+                }
+            }
+
+            // Para assim que recuperar todos os caracteres do original
+            if (caracteresProcessados == totalCaracteresOriginal) break;
+        }
+    }
+
+    arquivoCompactado.close();
+    arquivoDeSaida.close();
+    cout << "processo concluido com sucesso " << endl;
+    return 0;
 }
 
 void compactar(){
@@ -466,5 +536,6 @@ int main()
 // tirar a necessidade de colocar o .txt, e de tirar os ""
 // adicionar um check para o tipo de arquivo na hora de pegar o caminho do .txt
 // modificar, em vez de lista encadeada enquanto le os caracteres usar um vetor, depois ordenar ele
+// mudar a ordem de escrita dos buffer, ta escrevendo direita esquerda, deixar esquerda direita
 
 
